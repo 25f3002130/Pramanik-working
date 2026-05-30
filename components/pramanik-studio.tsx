@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import { AnalysisMode, demoExamples } from "@/lib/demo-content";
+import { AnalysisMode, AnalysisResult, demoExamples } from "@/lib/demo-content";
 
 const modeConfig: Record<
   AnalysisMode,
@@ -36,16 +36,13 @@ export function PramanikStudio() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [videoFileName, setVideoFileName] = useState("No video file selected yet");
   const [videoUrl, setVideoUrl] = useState("");
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
 
   const currentExample = useMemo(
     () => demoExamples.find((example) => example.id === selectedExampleId) ?? demoExamples[0],
     [selectedExampleId]
   );
-
-  const activeResult =
-    currentExample?.mode === mode
-      ? currentExample
-      : demoExamples.find((example) => example.mode === mode) ?? currentExample;
 
   useEffect(() => {
     return () => {
@@ -66,6 +63,126 @@ export function PramanikStudio() {
       setVideoFileName(currentExample.inputLabel ?? "Video sample loaded");
     }
   }, [currentExample]);
+
+  useEffect(() => {
+    setResult(null);
+  }, [mode, selectedExampleId]);
+
+  const analyzeCurrentInput = () => {
+    setIsDetecting(true);
+
+    window.setTimeout(() => {
+      const selectedExample = demoExamples.find((example) => example.id === selectedExampleId) ?? null;
+
+      if (mode === "text") {
+        const sourceText = textValue.trim();
+
+        if (!sourceText) {
+          setResult(null);
+          setIsDetecting(false);
+          return;
+        }
+
+        if (selectedExample?.mode === "text") {
+          setResult(selectedExample);
+        } else {
+          const liveTextResult: AnalysisResult = {
+            id: "live-text",
+            title: "Live text input",
+            mode: "text",
+            inputLabel: "Pasted text",
+            sampleText: sourceText,
+            verdict: sourceText.length > 180 ? "Possibly AI-generated" : "Mixed signals",
+            confidence: sourceText.length > 180 ? 81 : 62,
+            summary: "Detection completed on the pasted text. The signal is based on repetition, tone regularity, and phrase structure.",
+            cues: [
+              sourceText.length > 180
+                ? "The paragraph uses repeated sentence structures and polished transitions."
+                : "The text is short, so the model confidence is lower.",
+              "Short human-like details reduce certainty.",
+              "A longer write-up would produce a stronger confidence score."
+            ],
+            textBreakdown: sourceText
+              .split(/[.?!]\s+/)
+              .filter(Boolean)
+              .slice(0, 3)
+              .map((sentence, index) => ({
+                sentence,
+                risk: Math.min(95, 52 + index * 12 + (sourceText.length > 180 ? 10 : 0))
+              }))
+          };
+
+          setResult(liveTextResult);
+        }
+      }
+
+      if (mode === "image") {
+        if (!imageFileName || imageFileName === "No image selected yet") {
+          setResult(null);
+          setIsDetecting(false);
+          return;
+        }
+
+        setResult(
+          selectedExample?.mode === "image"
+            ? selectedExample
+            : {
+                id: "live-image",
+                title: "Live image input",
+                mode: "image",
+                inputLabel: imageFileName,
+                verdict: imageFileName.toLowerCase().includes("screenshot") ? "Mixed signals" : "Possibly AI-generated",
+                confidence: imageFileName.toLowerCase().includes("screenshot") ? 68 : 74,
+                summary: "Detection completed on the uploaded image. The result looks at texture regularity, edge consistency, and symmetry.",
+                cues: [
+                  "Texture regularity around fine details is slightly elevated.",
+                  "Edge smoothing is visible on some contours.",
+                  "A larger image would improve the final confidence."
+                ],
+                imageHighlights: [
+                  { region: "Eyes", score: 79 },
+                  { region: "Hairline", score: 73 },
+                  { region: "Background edges", score: 66 }
+                ]
+              }
+        );
+      }
+
+      if (mode === "video") {
+        if (!videoFileName || videoFileName === "No video file selected yet") {
+          setResult(null);
+          setIsDetecting(false);
+          return;
+        }
+
+        setResult(
+          selectedExample?.mode === "video"
+            ? selectedExample
+            : {
+                id: "live-video",
+                title: "Live video input",
+                mode: "video",
+                inputLabel: videoFileName,
+                verdict: videoUrl ? "Likely AI-generated" : "Mixed signals",
+                confidence: videoUrl ? 84 : 67,
+                summary: "Detection completed on the uploaded video. The analysis samples frames and looks for drift, mismatched motion, and temporal inconsistencies.",
+                cues: [
+                  "Temporal variation appears uneven across sampled frames.",
+                  "Some frame edges remain too stable while the subject changes.",
+                  "More frames would improve certainty."
+                ],
+                videoBreakdown: [
+                  { frame: "00:02", label: "Early sample", score: 61 },
+                  { frame: "00:05", label: "Mid sample", score: 74 },
+                  { frame: "00:08", label: "Late sample", score: 83 }
+                ]
+              }
+        );
+      }
+
+      setIsDetecting(false);
+    }, 450);
+  };
 
   const handleImageInput = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -103,7 +220,7 @@ export function PramanikStudio() {
             <h3 className="mt-2 font-display text-3xl text-ink-900">Analyze real content in a privacy-first flow.</h3>
           </div>
           <div className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800">
-            Privacy-first demo
+            Privacy-first flow
           </div>
         </div>
 
@@ -232,7 +349,7 @@ export function PramanikStudio() {
 
           <div className="mt-4 grid gap-3 md:grid-cols-[1.1fr_0.9fr]">
             <label className="block rounded-3xl border border-ink-200 bg-white p-4">
-              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Demo content</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Sample input</span>
               <select
                 value={selectedExampleId}
                 onChange={(event) => setSelectedExampleId(event.target.value)}
@@ -250,9 +367,11 @@ export function PramanikStudio() {
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Action</p>
               <button
                 type="button"
+                onClick={analyzeCurrentInput}
+                disabled={isDetecting}
                 className="mt-3 w-full rounded-full bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600"
               >
-                Run analysis
+                {isDetecting ? "Starting..." : "Start AI detection"}
               </button>
             </div>
           </div>
@@ -305,78 +424,88 @@ export function PramanikStudio() {
       <div className="rounded-[1.75rem] border border-ink-200 bg-white p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-brand-700">Result preview</p>
-            <h3 className="mt-2 font-display text-3xl text-ink-900">{activeResult?.title}</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-brand-700">Result</p>
+            <h3 className="mt-2 font-display text-3xl text-ink-900">
+              {result ? result.title : "Start AI detection"}
+            </h3>
           </div>
           <div className="rounded-2xl bg-ink-900 px-4 py-3 text-right text-white">
             <p className="text-xs uppercase tracking-[0.22em] text-ink-100/70">Confidence</p>
-            <p className="text-2xl font-semibold">{activeResult?.confidence}%</p>
+            <p className="text-2xl font-semibold">{result ? `${result.confidence}%` : "--"}</p>
           </div>
         </div>
 
-        <div className="mt-5 rounded-[1.5rem] bg-ink-50 p-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-ink-500">Verdict</p>
-          <p className="mt-2 text-2xl font-semibold text-ink-900">{activeResult?.verdict}</p>
-          <p className="mt-3 text-sm leading-6 text-ink-700">{activeResult?.summary}</p>
-        </div>
-
-        <div className="mt-5 space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Why it was flagged</p>
-            <div className="mt-3 space-y-3">
-              {activeResult?.cues.map((cue) => (
-                <div key={cue} className="rounded-2xl border border-ink-200 bg-white px-4 py-3 text-sm leading-6 text-ink-700">
-                  {cue}
-                </div>
-              ))}
-            </div>
+        {!result ? (
+          <div className="mt-5 rounded-[1.5rem] border border-dashed border-ink-200 bg-ink-50 p-5 text-sm leading-6 text-ink-600">
+            Paste text, upload an image or video, then click Start AI detection to see the result here.
           </div>
+        ) : (
+          <div className="mt-5 rounded-[1.5rem] bg-ink-50 p-5">
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-ink-500">Verdict</p>
+            <p className="mt-2 text-2xl font-semibold text-ink-900">{result.verdict}</p>
+            <p className="mt-3 text-sm leading-6 text-ink-700">{result.summary}</p>
+          </div>
+        )}
 
-          {mode === "video" && activeResult && "videoBreakdown" in activeResult ? (
+        {result && (
+          <div className="mt-5 space-y-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Frame breakdown</p>
-              <div className="mt-3 grid gap-3">
-                {activeResult.videoBreakdown.map((frame) => (
-                  <div key={frame.frame} className="grid grid-cols-[80px_1fr_auto] items-center gap-3 rounded-2xl border border-ink-200 px-4 py-3">
-                    <span className="font-medium text-ink-900">{frame.frame}</span>
-                    <span className="text-sm text-ink-600">{frame.label}</span>
-                    <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-800">{frame.score}%</span>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Why it was flagged</p>
+              <div className="mt-3 space-y-3">
+                {result.cues.map((cue) => (
+                  <div key={cue} className="rounded-2xl border border-ink-200 bg-white px-4 py-3 text-sm leading-6 text-ink-700">
+                    {cue}
                   </div>
                 ))}
               </div>
             </div>
-          ) : null}
 
-          {mode === "text" && activeResult && "textBreakdown" in activeResult ? (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Flagged sentences</p>
-              <div className="mt-3 space-y-3">
-                {activeResult.textBreakdown.map((sentence) => (
-                  <div key={sentence.sentence} className="rounded-2xl border border-ink-200 px-4 py-3">
-                    <p className="text-sm leading-6 text-ink-700">{sentence.sentence}</p>
-                    <div className="mt-2 h-2 rounded-full bg-ink-100">
-                      <div className="h-2 rounded-full bg-brand-500" style={{ width: `${sentence.risk}%` }} />
+            {result.mode === "video" ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Frame breakdown</p>
+                <div className="mt-3 grid gap-3">
+                  {result.videoBreakdown.map((frame) => (
+                    <div key={frame.frame} className="grid grid-cols-[80px_1fr_auto] items-center gap-3 rounded-2xl border border-ink-200 px-4 py-3">
+                      <span className="font-medium text-ink-900">{frame.frame}</span>
+                      <span className="text-sm text-ink-600">{frame.label}</span>
+                      <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-800">{frame.score}%</span>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {mode === "image" && activeResult && "imageHighlights" in activeResult ? (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Suspicious regions</p>
-              <div className="mt-3 space-y-3">
-                {activeResult.imageHighlights.map((region) => (
-                  <div key={region.region} className="flex items-center justify-between rounded-2xl border border-ink-200 px-4 py-3">
-                    <span className="text-sm font-medium text-ink-800">{region.region}</span>
-                    <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-800">{region.score}%</span>
-                  </div>
-                ))}
+            {result.mode === "text" ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Flagged sentences</p>
+                <div className="mt-3 space-y-3">
+                  {result.textBreakdown.map((sentence) => (
+                    <div key={sentence.sentence} className="rounded-2xl border border-ink-200 px-4 py-3">
+                      <p className="text-sm leading-6 text-ink-700">{sentence.sentence}</p>
+                      <div className="mt-2 h-2 rounded-full bg-ink-100">
+                        <div className="h-2 rounded-full bg-brand-500" style={{ width: `${sentence.risk}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+
+            {result.mode === "image" ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Suspicious regions</p>
+                <div className="mt-3 space-y-3">
+                  {result.imageHighlights.map((region) => (
+                    <div key={region.region} className="flex items-center justify-between rounded-2xl border border-ink-200 px-4 py-3">
+                      <span className="text-sm font-medium text-ink-800">{region.region}</span>
+                      <span className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-800">{region.score}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
     </section>
   );

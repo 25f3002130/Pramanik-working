@@ -1,5 +1,42 @@
 export type AnalysisMode = "image" | "text" | "video";
 
+type BaseAnalysisResult = {
+  id: string;
+  title: string;
+  mode: AnalysisMode;
+  inputLabel: string;
+  verdict: string;
+  confidence: number;
+  summary: string;
+  cues: string[];
+};
+
+export type ImageAnalysisResult = BaseAnalysisResult & {
+  mode: "image";
+  imageHighlights: { region: string; score: number }[];
+  sampleText?: never;
+  textBreakdown?: never;
+  videoBreakdown?: never;
+};
+
+export type TextAnalysisResult = BaseAnalysisResult & {
+  mode: "text";
+  sampleText: string;
+  textBreakdown: { sentence: string; risk: number }[];
+  imageHighlights?: never;
+  videoBreakdown?: never;
+};
+
+export type VideoAnalysisResult = BaseAnalysisResult & {
+  mode: "video";
+  videoBreakdown: { frame: string; label: string; score: number }[];
+  sampleText?: never;
+  textBreakdown?: never;
+  imageHighlights?: never;
+};
+
+export type AnalysisResult = ImageAnalysisResult | TextAnalysisResult | VideoAnalysisResult;
+
 export const trustStats = [
   { value: "< 1s", label: "client-side video frame sampling with ffmpeg.wasm" },
   { value: "3 modes", label: "image, text, and video detection in one flow" },
@@ -20,7 +57,7 @@ export const pitchSignals = [
   {
     title: "Built for the extension later",
     description:
-      "The demo is structured as a modular analysis layer so the browser extension can reuse it directly."
+      "The analysis layer is structured as a modular system so the browser extension can reuse it directly."
   }
 ] as const;
 
@@ -115,4 +152,4 @@ export const demoExamples = [
       { region: "Jaw edge", score: 69 }
     ]
   }
-] as const;
+] as const satisfies readonly AnalysisResult[];

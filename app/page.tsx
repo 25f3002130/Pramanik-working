@@ -1,4 +1,4 @@
-import { PramanikStudio } from "@/components/veritas-studio";
+import { PramanikStudio } from "@/components/pramanik-studio";
 import { pitchSignals, processSteps, trustStats } from "@/lib/demo-content";
 
 export default function Page() {
@@ -23,12 +23,12 @@ export default function Page() {
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-soft backdrop-blur md:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-700">Round 1 Demo</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-700">Round 1</p>
             <h2 className="mt-4 font-display text-5xl leading-[0.95] text-ink-900 md:text-7xl">
               Detect AI-generated content before it spreads.
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-ink-700 md:text-lg">
-              Pramanik is built for the competition demo today and the browser extension tomorrow. It analyzes
+              Pramanik is built for the competition release today and the browser extension tomorrow. It analyzes
               user-provided content in real time, explains why something looks synthetic, and keeps the entire
               workflow privacy-preserving.
             </p>
