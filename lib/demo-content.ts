@@ -15,7 +15,7 @@ export const pitchSignals = [
   {
     title: "Explainability beats a raw score",
     description:
-      "Veritas highlights the suspicious text, image regions, or frames that push a verdict over the line."
+      "Pramanik highlights the suspicious text, image regions, or frames that push a verdict over the line."
   },
   {
     title: "Built for the extension later",
@@ -47,6 +47,7 @@ export const demoExamples = [
     id: "whatsapp-forward",
     title: "Forwarded WhatsApp clip",
     mode: "video" as const,
+    inputLabel: "Forwarded MP4 from a messaging app",
     verdict: "Likely AI-generated",
     confidence: 91,
     summary:
@@ -67,6 +68,9 @@ export const demoExamples = [
     id: "opinion-post",
     title: "Suspicious social post",
     mode: "text" as const,
+    inputLabel: "Polished marketing-style post",
+    sampleText:
+      "This groundbreaking solution will transform every workflow overnight. It offers unmatched productivity, unmatched clarity, and unmatched efficiency. Teams everywhere will instantly feel the difference.",
     verdict: "Likely AI-generated",
     confidence: 86,
     summary:
@@ -95,6 +99,7 @@ export const demoExamples = [
     id: "profile-photo",
     title: "Profile image upload",
     mode: "image" as const,
+    inputLabel: "Portrait-style image upload",
     verdict: "Possibly AI-generated",
     confidence: 74,
     summary:

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { AnalysisMode, demoExamples } from "@/lib/demo-content";
 
 const modeConfig: Record<
@@ -28,9 +29,14 @@ const modeConfig: Record<
   }
 };
 
-export function VeritasStudio() {
+export function PramanikStudio() {
   const [mode, setMode] = useState<AnalysisMode>("video");
-  const [selectedExampleId, setSelectedExampleId] = useState(demoExamples[0]?.id ?? "");
+  const [selectedExampleId, setSelectedExampleId] = useState<string>(demoExamples[0]?.id ?? "");
+  const [textValue, setTextValue] = useState("");
+  const [imageFileName, setImageFileName] = useState("No image selected yet");
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [videoFileName, setVideoFileName] = useState("No video file selected yet");
+  const [videoUrl, setVideoUrl] = useState("");
 
   const currentExample = useMemo(
     () => demoExamples.find((example) => example.id === selectedExampleId) ?? demoExamples[0],
@@ -42,13 +48,60 @@ export function VeritasStudio() {
       ? currentExample
       : demoExamples.find((example) => example.mode === mode) ?? currentExample;
 
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
+
+  useEffect(() => {
+    if (currentExample?.mode === "text" && currentExample.sampleText) {
+      setTextValue(currentExample.sampleText);
+    }
+    if (currentExample?.mode === "image") {
+      setImageFileName(currentExample.inputLabel ?? "Image sample loaded");
+    }
+    if (currentExample?.mode === "video") {
+      setVideoFileName(currentExample.inputLabel ?? "Video sample loaded");
+    }
+  }, [currentExample]);
+
+  const handleImageInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setImageFileName(file.name);
+    setMode("image");
+
+    setImagePreviewUrl((existingUrl) => {
+      if (existingUrl) {
+        URL.revokeObjectURL(existingUrl);
+      }
+      return URL.createObjectURL(file);
+    });
+  };
+
+  const handleVideoInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setVideoFileName(file.name);
+    setMode("video");
+  };
+
   return (
-    <section className="grid gap-6 rounded-[2rem] border border-white/70 bg-white/88 p-5 shadow-soft backdrop-blur lg:grid-cols-[0.92fr_1.08fr] lg:p-6">
+    <section className="grid gap-6 rounded-[2rem] border border-white/70 bg-white/88 p-5 shadow-soft backdrop-blur lg:grid-cols-[1fr_1.05fr] lg:p-6">
       <div className="rounded-[1.75rem] border border-ink-200 bg-ink-50 p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-brand-700">Veritas console</p>
-            <h3 className="mt-2 font-display text-3xl text-ink-900">Analyze any content in seconds.</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-brand-700">Pramanik console</p>
+            <h3 className="mt-2 font-display text-3xl text-ink-900">Analyze real content in a privacy-first flow.</h3>
           </div>
           <div className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-800">
             Privacy-first demo
@@ -81,19 +134,98 @@ export function VeritasStudio() {
             </span>
           </div>
 
-          <div className="mt-4 rounded-3xl bg-ink-900 px-4 py-6 text-white">
-            <div className="flex items-center justify-between text-sm text-ink-100/80">
-              <span>Input area</span>
-              <span>{modeConfig[mode].placeholder}</span>
+          {mode === "image" ? (
+            <div className="mt-4 space-y-4">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-ink-300 bg-ink-900 px-5 py-8 text-center text-white transition hover:border-brand-300 hover:bg-ink-800">
+                <span className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-200">Upload image</span>
+                <span className="mt-3 text-lg font-semibold">Choose a screenshot, portrait, or forwarded photo</span>
+                <span className="mt-2 text-sm leading-6 text-ink-100/75">Your file stays in the browser until you send it to the proxy layer later.</span>
+                <input type="file" accept="image/*" onChange={handleImageInput} className="sr-only" />
+              </label>
+
+              <div className="rounded-3xl border border-ink-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Selected image</p>
+                <p className="mt-2 text-sm text-ink-800">{imageFileName}</p>
+                {imagePreviewUrl ? (
+                  <div className="relative mt-4 h-48 w-full overflow-hidden rounded-3xl">
+                    <Image src={imagePreviewUrl} alt="Selected preview" fill className="object-cover" unoptimized />
+                  </div>
+                ) : (
+                  <div className="mt-4 flex h-48 items-center justify-center rounded-3xl bg-ink-100 text-sm text-ink-500">
+                    Preview appears here after upload.
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="mt-4 flex min-h-36 items-center justify-center rounded-[1.5rem] border border-dashed border-white/15 bg-white/5 px-4 text-center text-sm leading-6 text-ink-100/80">
-              {mode === "text"
-                ? "Drop in a paragraph or paste a message to see sentence-level reasoning."
-                : mode === "image"
-                  ? "A future upload surface will show highlight overlays on suspicious regions."
-                  : "A future upload surface will sample frames locally and show a frame-by-frame verdict."}
+          ) : null}
+
+          {mode === "text" ? (
+            <div className="mt-4 space-y-4">
+              <label className="block rounded-3xl border border-ink-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Paste text</span>
+                  <span className="text-xs text-ink-500">{textValue.length.toLocaleString()} chars</span>
+                </div>
+                <textarea
+                  value={textValue}
+                  onChange={(event) => setTextValue(event.target.value)}
+                  rows={9}
+                  placeholder="Paste a blog post, WhatsApp message, tweet, or article paragraph here."
+                  className="mt-3 w-full resize-none rounded-2xl border border-ink-200 bg-ink-50 px-4 py-3 text-sm leading-6 text-ink-900 outline-none transition placeholder:text-ink-400 focus:border-brand-400"
+                />
+              </label>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setTextValue(demoExamples.find((example) => example.id === "opinion-post")?.sampleText ?? "")}
+                  className="rounded-3xl border border-ink-200 bg-white px-4 py-4 text-left text-sm font-medium text-ink-800 transition hover:border-brand-300"
+                >
+                  Load suspicious post example
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTextValue("")}
+                  className="rounded-3xl border border-ink-200 bg-white px-4 py-4 text-left text-sm font-medium text-ink-800 transition hover:border-brand-300"
+                >
+                  Clear text area
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
+
+          {mode === "video" ? (
+            <div className="mt-4 space-y-4">
+              <label className="block rounded-3xl border border-ink-200 bg-white p-4">
+                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Video URL</span>
+                <input
+                  type="url"
+                  value={videoUrl}
+                  onChange={(event) => setVideoUrl(event.target.value)}
+                  placeholder="https://example.com/video.mp4"
+                  className="mt-3 w-full rounded-2xl border border-ink-200 bg-ink-50 px-4 py-3 text-sm text-ink-900 outline-none transition placeholder:text-ink-400 focus:border-brand-400"
+                />
+                <p className="mt-2 text-xs leading-5 text-ink-500">
+                  Best for direct media URLs. YouTube and social embeds will need a later extraction step.
+                </p>
+              </label>
+
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-ink-300 bg-ink-900 px-5 py-8 text-center text-white transition hover:border-brand-300 hover:bg-ink-800">
+                <span className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-200">Upload video</span>
+                <span className="mt-3 text-lg font-semibold">Choose a clip for local frame sampling</span>
+                <span className="mt-2 text-sm leading-6 text-ink-100/75">ffmpeg.wasm keeps frame extraction inside the browser, so the raw video never leaves the device.</span>
+                <input type="file" accept="video/*" onChange={handleVideoInput} className="sr-only" />
+              </label>
+
+              <div className="rounded-3xl border border-ink-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Selected media</p>
+                <p className="mt-2 text-sm text-ink-800">{videoFileName}</p>
+                <div className="mt-4 rounded-3xl bg-ink-100 px-4 py-4 text-sm leading-6 text-ink-600">
+                  Frame sampling will later show which timestamps are suspicious, not just the final verdict.
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-4 grid gap-3 md:grid-cols-[1.1fr_0.9fr]">
             <label className="block rounded-3xl border border-ink-200 bg-white p-4">
@@ -119,6 +251,30 @@ export function VeritasStudio() {
               >
                 Run analysis
               </button>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-3xl border border-ink-200 bg-ink-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">Live input snapshot</p>
+            <div className="mt-3 grid gap-3 text-sm text-ink-700 md:grid-cols-3">
+              <div className="rounded-2xl bg-white px-4 py-3">
+                <span className="block text-xs uppercase tracking-[0.2em] text-ink-500">Mode</span>
+                <span className="mt-1 block font-medium text-ink-900">{modeConfig[mode].title}</span>
+              </div>
+              <div className="rounded-2xl bg-white px-4 py-3">
+                <span className="block text-xs uppercase tracking-[0.2em] text-ink-500">Input</span>
+                <span className="mt-1 block font-medium text-ink-900">
+                  {mode === "text"
+                    ? `${textValue.length.toLocaleString()} chars pasted`
+                    : mode === "image"
+                      ? imageFileName
+                      : videoUrl || videoFileName}
+                </span>
+              </div>
+              <div className="rounded-2xl bg-white px-4 py-3">
+                <span className="block text-xs uppercase tracking-[0.2em] text-ink-500">Privacy</span>
+                <span className="mt-1 block font-medium text-ink-900">No storage, no logs, no retention.</span>
+              </div>
             </div>
           </div>
         </div>

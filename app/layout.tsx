@@ -15,10 +15,10 @@ const body = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Veritas | Trust Layer for Digital Content",
+  title: "Pramanik | Trust Layer for Digital Content",
   description:
     "Privacy-first AI content detection for images, text, and video. Your content never touches our servers.",
-  metadataBase: new URL("https://veritas.example")
+  metadataBase: new URL("https://pramanik.example")
 };
 
 export default function RootLayout({

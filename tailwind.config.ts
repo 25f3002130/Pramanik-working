@@ -47,9 +47,9 @@ const config: Config = {
         lift: "0 18px 50px rgba(18, 22, 19, 0.12)"
       },
       backgroundImage: {
-        "veritas-grid":
+        "pramanik-grid":
           "radial-gradient(circle at 1px 1px, rgba(18,22,19,0.08) 1px, transparent 0)",
-        "veritas-glow":
+        "pramanik-glow":
           "radial-gradient(circle at top, rgba(28,178,110,0.16), transparent 45%), radial-gradient(circle at bottom right, rgba(179,192,184,0.36), transparent 42%)"
       },
       fontFamily: {
